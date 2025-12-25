@@ -114,7 +114,7 @@
 
 <body>
     <div id="message-overlay">
-        <p class="hint-text">Type to Draw</p>
+        <p class="hint-text">Type or Touch to Draw</p>
     </div>
 
     <div id="ending-overlay">
@@ -482,6 +482,8 @@
             allSegments = createChristmasSegments();
 
             document.addEventListener('keydown', handleKeyPress);
+            document.addEventListener('touchstart', handleTouch);
+            document.addEventListener('mousedown', handleTouch);
             window.addEventListener('resize', handleResize);
 
             animate();
@@ -567,6 +569,15 @@
 
         function handleKeyPress(event) {
             if (event.code === 'F5' || event.code === 'F12' || event.ctrlKey || event.metaKey) return;
+            triggerInteraction();
+        }
+
+        function handleTouch(event) {
+            // event.preventDefault(); 
+            triggerInteraction();
+        }
+
+        function triggerInteraction() {
             if (isComplete) return;
 
             state.isTyping = true;
