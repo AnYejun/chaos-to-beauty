@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drawing Christmas</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            overflow: hidden;
+            background: #000000;
+            font-family: 'Times New Roman', serif;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #message-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            pointer-events: none;
+            transition: opacity 2s ease;
+        }
+
+        #message-overlay.hidden {
+            opacity: 0;
+        }
+
+        .hint-text {
+            font-size: 1.5rem;
+            font-weight: 300;
+            letter-spacing: 0.3em;
+            color: #ffffff;
+            opacity: 0.7;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+            animation: pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 0.3;
+            }
+
+            50% {
+                opacity: 0.8;
+            }
+        }
+
+        #ending-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            /* 상단 배치 */
+            padding-top: 15vh;
+            /* 위에서 15vh 띄움 */
+            z-index: 200;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 3s ease;
+        }
+
+        #ending-overlay.visible {
+            opacity: 1;
+        }
+
+        .ending-title {
+            font-family: 'Snell Roundhand', 'Cursive', serif;
+            font-size: 6rem;
+            font-weight: 100;
+            color: #ffffff;
+            /* 깔끔한 화이트 네온 글로우 */
+            text-shadow:
+                0 0 5px #fff,
+                0 0 10px #fff,
+                0 0 20px #fff,
+                0 0 40px #fff;
+        }
+
+        .ending-signature {
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            letter-spacing: 0.2em;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: auto;
+            /* 하단으로 밀어내기 */
+            margin-bottom: 20px;
+            text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
+            opacity: 0.8;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="message-overlay">
+        <p class="hint-text">Type to Draw</p>
+    </div>
+
+    <div id="ending-overlay">
+        <p class="ending-title">Merry Christmas</p>
+        <p class="ending-signature">codex.of.anyed</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+        /* ═══════════════════════════════════════════════════════════════════════════
+           Drawing Christmas with Light
+           
+           - Pure White Neon Sign Style
+           - No flickering, No gold transformation
+           - Adds Spotlights on completion
+           ═══════════════════════════════════════════════════════════════════════════ */
+
+        function createChristmasSegments() {
+            const segments = [];
+            const scale = 1.6;
+            const centerY = -8;
+
+            function addSegment(x1, y1, z1, x2, y2, z2, priority = 0) {
+                segments.push({
+                    start: new THREE.Vector3(x1 * scale, y1 * scale + centerY, z1 * scale),
+                    end: new THREE.Vector3(x2 * scale, y2 * scale + centerY, z2 * scale),
+                    priority: priority,
+                    drawn: false
+                });
+            }
+
+            function addPolygon(cx, cy, cz, radius, sides, priority) {
+                for (let i = 0; i < sides; i++) {
+                    const a1 = (i / sides) * Math.PI * 2;
+                    const a2 = ((i + 1) / sides) * Math.PI * 2;
+                    addSegment(cx + Math.cos(a1) * radius, cy, cz + Math.sin(a1) * radius,
+                        cx + Math.cos(a2) * radius, cy, cz + Math.sin(a2) * radius, priority);
+                }
+            }
+
+            function addStar(cx, cy, cz, outerR, innerR, points, priority) {
+                for (let i = 0; i < points; i++) {
+                    const a1 = (i / points) * Math.PI * 2 - Math.PI / 2;
+                    const a2 = ((i + 0.5) / points) * Math.PI * 2 - Math.PI / 2;
+                    const a3 = ((i + 1) / points) * Math.PI * 2 - Math.PI / 2;
+                    addSegment(cx + Math.cos(a1) * outerR, cy, cz + Math.sin(a1) * outerR,
+                        cx + Math.cos(a2) * innerR, cy, cz + Math.sin(a2) * innerR, priority);
+                    addSegment(cx + Math.cos(a2) * innerR, cy, cz + Math.sin(a2) * innerR,
+                        cx + Math.cos(a3) * outerR, cy, cz + Math.sin(a3) * outerR, priority);
+                }
+            }
+
+            function addSpiral(cx, cy, cz, radius, height, turns, segments_count, priority) {
+                for (let i = 0; i < segments_count; i++) {
+                    const t1 = i / segments_count, t2 = (i + 1) / segments_count;
+                    const a1 = t1 * Math.PI * 2 * turns, a2 = t2 * Math.PI * 2 * turns;
+                    const r1 = radius * (1 - t1 * 0.3), r2 = radius * (1 - t2 * 0.3);
+                    addSegment(cx + Math.cos(a1) * r1, cy + t1 * height, cz + Math.sin(a1) * r1,
+                        cx + Math.cos(a2) * r2, cy + t2 * height, cz + Math.sin(a2) * r2, priority);
+                }
+            }
+
+            function addDiamond(cx, cy, cz, size, priority) {
+                addSegment(cx, cy + size, cz, cx + size * 0.7, cy, cz, priority);
+                addSegment(cx, cy + size, cz, cx - size * 0.7, cy, cz, priority);
+                addSegment(cx, cy + size, cz, cx, cy, cz + size * 0.7, priority);
+                addSegment(cx, cy + size, cz, cx, cy, cz - size * 0.7, priority);
+                addSegment(cx, cy - size, cz, cx + size * 0.7, cy, cz, priority);
+                addSegment(cx, cy - size, cz, cx - size * 0.7, cy, cz, priority);
+                addSegment(cx, cy - size, cz, cx, cy, cz + size * 0.7, priority);
+                addSegment(cx, cy - size, cz, cx, cy, cz - size * 0.7, priority);
+                addSegment(cx + size * 0.7, cy, cz, cx, cy, cz + size * 0.7, priority);
+                addSegment(cx, cy, cz + size * 0.7, cx - size * 0.7, cy, cz, priority);
+                addSegment(cx - size * 0.7, cy, cz, cx, cy, cz - size * 0.7, priority);
+                addSegment(cx, cy, cz - size * 0.7, cx + size * 0.7, cy, cz, priority);
+            }
+
+            function addBox(cx, cy, cz, w, h, d, priority, subdiv = 2) {
+                const hw = w / 2, hd = d / 2;
+                for (let i = 0; i < subdiv; i++) {
+                    const t1 = i / subdiv, t2 = (i + 1) / subdiv;
+                    addSegment(cx - hw + w * t1, cy, cz - hd, cx - hw + w * t2, cy, cz - hd, priority);
+                    addSegment(cx - hw + w * t1, cy, cz + hd, cx - hw + w * t2, cy, cz + hd, priority);
+                    addSegment(cx - hw, cy, cz - hd + d * t1, cx - hw, cy, cz - hd + d * t2, priority);
+                    addSegment(cx + hw, cy, cz - hd + d * t1, cx + hw, cy, cz - hd + d * t2, priority);
+                    addSegment(cx - hw + w * t1, cy + h, cz - hd, cx - hw + w * t2, cy + h, cz - hd, priority);
+                    addSegment(cx - hw + w * t1, cy + h, cz + hd, cx - hw + w * t2, cy + h, cz + hd, priority);
+                    addSegment(cx - hw, cy + h, cz - hd + d * t1, cx - hw, cy + h, cz - hd + d * t2, priority);
+                    addSegment(cx + hw, cy + h, cz - hd + d * t1, cx + hw, cy + h, cz - hd + d * t2, priority);
+                    const vy1 = cy + h * t1, vy2 = cy + h * t2;
+                    addSegment(cx - hw, vy1, cz - hd, cx - hw, vy2, cz - hd, priority);
+                    addSegment(cx + hw, vy1, cz - hd, cx + hw, vy2, cz - hd, priority);
+                    addSegment(cx - hw, vy1, cz + hd, cx - hw, vy2, cz + hd, priority);
+                    addSegment(cx + hw, vy1, cz + hd, cx + hw, vy2, cz + hd, priority);
+                }
+            }
+
+            function addSphere(cx, cy, cz, radius, latCount, lonCount, priority) {
+                for (let lat = 0; lat < latCount; lat++) {
+                    const theta1 = (lat / latCount) * Math.PI, theta2 = ((lat + 1) / latCount) * Math.PI;
+                    const r1 = Math.sin(theta1) * radius, r2 = Math.sin(theta2) * radius;
+                    const y1 = cy + Math.cos(theta1) * radius, y2 = cy + Math.cos(theta2) * radius;
+                    for (let lon = 0; lon < lonCount; lon++) {
+                        const phi1 = (lon / lonCount) * Math.PI * 2, phi2 = ((lon + 1) / lonCount) * Math.PI * 2;
+                        addSegment(cx + Math.cos(phi1) * r1, y1, cz + Math.sin(phi1) * r1,
+                            cx + Math.cos(phi2) * r1, y1, cz + Math.sin(phi2) * r1, priority);
+                        addSegment(cx + Math.cos(phi1) * r1, y1, cz + Math.sin(phi1) * r1,
+                            cx + Math.cos(phi1) * r2, y2, cz + Math.sin(phi1) * r2, priority);
+                    }
+                }
+            }
+
+            function addPyramid(cx, cy, cz, baseSize, height, priority) {
+                const h = baseSize / 2;
+                addSegment(cx - h, cy, cz - h, cx + h, cy, cz - h, priority);
+                addSegment(cx + h, cy, cz - h, cx + h, cy, cz + h, priority);
+                addSegment(cx + h, cy, cz + h, cx - h, cy, cz + h, priority);
+                addSegment(cx - h, cy, cz + h, cx - h, cy, cz - h, priority);
+                addSegment(cx - h, cy, cz - h, cx, cy + height, cz, priority);
+                addSegment(cx + h, cy, cz - h, cx, cy + height, cz, priority);
+                addSegment(cx + h, cy, cz + h, cx, cy + height, cz, priority);
+                addSegment(cx - h, cy, cz + h, cx, cy + height, cz, priority);
+            }
+
+            // 오르골 받침대
+            addPolygon(0, 0, 0, 18, 8, 0);
+            addPolygon(0, -0.5, 0, 19, 8, 0);
+            for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * Math.PI * 2;
+                addSegment(Math.cos(a) * 18, 0, Math.sin(a) * 18, Math.cos(a) * 19, -0.5, Math.sin(a) * 19, 0);
+            }
+            for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * Math.PI * 2;
+                addSegment(0, 0.01, 0, Math.cos(a) * 12, 0.01, Math.sin(a) * 12, 1);
+            }
+            addPolygon(0, 0.01, 0, 8, 8, 1);
+            addPolygon(0, 0.01, 0, 5, 8, 1);
+
+            // 크리스마스 트리
+            for (let j = 0; j < 4; j++) addPolygon(0, j * 0.6, 0, 0.8, 8, 2);
+            for (let i = 0; i < 8; i++) {
+                const a = (i / 8) * Math.PI * 2;
+                addSegment(Math.cos(a) * 0.8, 0, Math.sin(a) * 0.8, Math.cos(a) * 0.8, 2.4, Math.sin(a) * 0.8, 2);
+            }
+
+            const layers = [
+                { y: 2, r: 7, h: 4, sides: 12 },
+                { y: 5, r: 5.5, h: 3.5, sides: 10 },
+                { y: 7.5, r: 4, h: 3, sides: 8 },
+                { y: 9.5, r: 2.5, h: 2.5, sides: 6 }
+            ];
+            layers.forEach((l, idx) => {
+                addPolygon(0, l.y, 0, l.r, l.sides, 3 + idx * 2);
+                for (let i = 0; i < l.sides; i++) {
+                    const a = (i / l.sides) * Math.PI * 2;
+                    addSegment(Math.cos(a) * l.r, l.y, Math.sin(a) * l.r, 0, l.y + l.h, 0, 3 + idx * 2);
+                }
+                if (idx < 3) addSpiral(0, l.y, 0, l.r * 0.7, l.h * 0.8, 1.2, 18, 4 + idx * 2);
+            });
+
+            const starY = 13;
+            addStar(0, starY, 0, 1.8, 0.7, 5, 12);
+            addDiamond(0, starY, 0, 1.2, 12);
+            addSegment(0, starY + 1.2, 0, 0, starY + 2.2, 0, 12);
+
+            const ornaments = [
+                { x: 4, y: 3.5, z: 3 }, { x: -3.5, y: 3, z: 4 }, { x: 5, y: 3.2, z: -2 },
+                { x: 3, y: 6, z: 2.5 }, { x: -2.5, y: 6.2, z: 3 }, { x: 2, y: 8.5, z: 2 }
+            ];
+            ornaments.forEach((o, idx) => addDiamond(o.x, o.y, o.z, 0.5, 13 + idx));
+
+            // 눈사람
+            const snowmanX = 10, snowmanZ = 5;
+            addSphere(snowmanX, 2, snowmanZ, 2.2, 7, 9, 20);
+            addSphere(snowmanX, 4.8, snowmanZ, 1.6, 6, 8, 21);
+            addSphere(snowmanX, 7, snowmanZ, 1.1, 5, 7, 22);
+            addPolygon(snowmanX, 8, snowmanZ, 1.3, 8, 23);
+            for (let i = 0; i < 6; i++) {
+                const a = (i / 6) * Math.PI * 2;
+                addSegment(snowmanX + Math.cos(a) * 0.9, 8, snowmanZ + Math.sin(a) * 0.9,
+                    snowmanX + Math.cos(a) * 0.9, 9.5, snowmanZ + Math.sin(a) * 0.9, 23);
+            }
+            addPolygon(snowmanX, 9.5, snowmanZ, 0.9, 6, 23);
+            addSegment(snowmanX - 1.6, 4.8, snowmanZ, snowmanX - 3.5, 5.8, snowmanZ, 21);
+            addSegment(snowmanX + 1.6, 4.8, snowmanZ, snowmanX + 3.5, 5.5, snowmanZ, 21);
+
+            // 피아노
+            const px = -11, pz = 5;
+            addSegment(px - 4, 0, pz - 2, px + 3, 0, pz - 2, 25);
+            addSegment(px + 3, 0, pz - 2, px + 3, 0, pz + 3, 25);
+            addSegment(px + 3, 0, pz + 3, px - 2, 0, pz + 3, 25);
+            for (let i = 0; i < 8; i++) {
+                const a1 = Math.PI * 0.5 + (i / 8) * Math.PI * 0.5;
+                const a2 = Math.PI * 0.5 + ((i + 1) / 8) * Math.PI * 0.5;
+                addSegment(px - 2 + Math.cos(a1) * 2, 0, pz + 3 + Math.sin(a1) * 2,
+                    px - 2 + Math.cos(a2) * 2, 0, pz + 3 + Math.sin(a2) * 2, 25);
+            }
+            addSegment(px - 4, 0, pz + 3, px - 4, 0, pz - 2, 25);
+
+            addSegment(px - 4, 2.8, pz - 2, px + 3, 2.8, pz - 2, 26);
+            addSegment(px + 3, 2.8, pz - 2, px + 3, 2.8, pz + 3, 26);
+            addSegment(px + 3, 2.8, pz + 3, px - 2, 2.8, pz + 3, 26);
+            for (let i = 0; i < 8; i++) {
+                const a1 = Math.PI * 0.5 + (i / 8) * Math.PI * 0.5;
+                const a2 = Math.PI * 0.5 + ((i + 1) / 8) * Math.PI * 0.5;
+                addSegment(px - 2 + Math.cos(a1) * 2, 2.8, pz + 3 + Math.sin(a1) * 2,
+                    px - 2 + Math.cos(a2) * 2, 2.8, pz + 3 + Math.sin(a2) * 2, 26);
+            }
+            addSegment(px - 4, 2.8, pz + 3, px - 4, 2.8, pz - 2, 26);
+
+            const legs = [{ x: px - 3, z: pz - 1.5 }, { x: px + 2.5, z: pz - 1.5 }, { x: px - 3, z: pz + 4 }];
+            legs.forEach(leg => addSegment(leg.x, 0, leg.z, leg.x, 2.8, leg.z, 25));
+
+            for (let i = 0; i < 14; i++) {
+                const kx = px - 2.8 + i * 0.38;
+                addSegment(kx, 2.86, pz + 2.6, kx, 2.86, pz + 3.9, 28);
+            }
+
+            addSegment(px - 4, 2.8, pz - 2, px - 4, 6, pz - 0.5, 30);
+            addSegment(px + 3, 2.8, pz - 2, px + 3, 6, pz - 0.5, 30);
+            addSegment(px - 4, 6, pz - 0.5, px + 3, 6, pz - 0.5, 30);
+            addSegment(px - 1, 2.8, pz - 1, px - 1, 5.5, pz - 0.6, 30);
+
+            addBox(px, 0, pz + 6, 2.5, 1.8, 1.2, 32, 2);
+
+            // 벽난로
+            const fx = 0, fz = -10;
+            addSegment(fx - 4, 0, fz, fx + 4, 0, fz, 35);
+            addSegment(fx - 4, 0, fz, fx - 4, 7, fz, 35);
+            addSegment(fx + 4, 0, fz, fx + 4, 7, fz, 35);
+            addSegment(fx - 4, 7, fz, fx + 4, 7, fz, 35);
+
+            addSegment(fx - 3, 0, fz + 0.5, fx - 3, 4, fz + 0.5, 36);
+            addSegment(fx + 3, 0, fz + 0.5, fx + 3, 4, fz + 0.5, 36);
+            for (let i = 0; i < 8; i++) {
+                const a1 = Math.PI + (i / 8) * Math.PI;
+                const a2 = Math.PI + ((i + 1) / 8) * Math.PI;
+                addSegment(fx + Math.cos(a1) * 3, 4 + Math.sin(a1) * 2, fz + 0.5,
+                    fx + Math.cos(a2) * 3, 4 + Math.sin(a2) * 2, fz + 0.5, 36);
+            }
+
+            for (let i = 0; i < 5; i++) {
+                const flameX = fx - 1.5 + i * 0.75;
+                const flameH = 1.5 + Math.random() * 1;
+                addSegment(flameX - 0.3, 0.2, fz, flameX, flameH, fz, 38);
+                addSegment(flameX + 0.3, 0.2, fz, flameX, flameH, fz, 38);
+            }
+
+            addSegment(fx - 4.5, 7.2, fz + 0.5, fx + 4.5, 7.2, fz + 0.5, 39);
+            addSegment(fx - 4.5, 7.2, fz - 0.5, fx + 4.5, 7.2, fz - 0.5, 39);
+
+            // TV
+            const tvX = 8, tvZ = -8;
+            addSegment(tvX, 0, tvZ, tvX, 3, tvZ, 42);
+            addPolygon(tvX, 0, tvZ, 1.5, 6, 42);
+            addSegment(tvX - 3, 3.5, tvZ, tvX + 3, 3.5, tvZ, 43);
+            addSegment(tvX - 3, 7.5, tvZ, tvX + 3, 7.5, tvZ, 43);
+            addSegment(tvX - 3, 3.5, tvZ, tvX - 3, 7.5, tvZ, 43);
+            addSegment(tvX + 3, 3.5, tvZ, tvX + 3, 7.5, tvZ, 43);
+            addSegment(tvX - 2.7, 3.8, tvZ + 0.1, tvX + 2.7, 3.8, tvZ + 0.1, 44);
+            addSegment(tvX - 2.7, 7.2, tvZ + 0.1, tvX + 2.7, 7.2, tvZ + 0.1, 44);
+            addSegment(tvX - 2.7, 3.8, tvZ + 0.1, tvX - 2.7, 7.2, tvZ + 0.1, 44);
+            addSegment(tvX + 2.7, 3.8, tvZ + 0.1, tvX + 2.7, 7.2, tvZ + 0.1, 44);
+
+            // 핫초코
+            const tableX = px + 5, tableZ = pz + 5;
+            addPolygon(tableX, 0, tableZ, 1.2, 6, 46);
+            for (let i = 0; i < 4; i++) {
+                const a = (i / 4) * Math.PI * 2;
+                addSegment(tableX + Math.cos(a), 0, tableZ + Math.sin(a),
+                    tableX + Math.cos(a) * 0.7, 2.2, tableZ + Math.sin(a) * 0.7, 46);
+            }
+            addPolygon(tableX, 2.2, tableZ, 1.2, 8, 47);
+            for (let j = 0; j < 3; j++) addPolygon(tableX, 2.25 + j * 0.4, tableZ, 0.4, 8, 48);
+            addSegment(tableX + 0.4, 2.4, tableZ, tableX + 0.7, 2.5, tableZ, 48);
+            addSegment(tableX + 0.7, 2.5, tableZ, tableX + 0.7, 2.9, tableZ, 48);
+            addSegment(tableX + 0.7, 2.9, tableZ, tableX + 0.4, 3, tableZ, 48);
+            for (let i = 0; i < 3; i++) {
+                const sx = tableX - 0.15 + i * 0.15;
+                addSegment(sx, 3.15, tableZ, sx + 0.08, 3.4, tableZ, 49);
+                addSegment(sx + 0.08, 3.4, tableZ, sx - 0.05, 3.65, tableZ, 49);
+            }
+
+            // 선물 상자들
+            addBox(-4, 0, 7, 2.5, 2.5, 2.5, 50, 2);
+            addDiamond(-4, 3.2, 7, 0.5, 51);
+            addBox(5, 0, 8, 2, 1.8, 2, 52, 2);
+            addBox(3, 0, -4, 2.5, 1, 2, 53, 2);
+
+            // 눈송이들
+            for (let i = 0; i < 20; i++) {
+                const x = (Math.random() - 0.5) * 35;
+                const y = 4 + Math.random() * 10;
+                const z = (Math.random() - 0.5) * 25;
+                const size = 0.15 + Math.random() * 0.15;
+                const priority = 55 + Math.floor(i / 2);
+                for (let j = 0; j < 6; j++) {
+                    const a = (j / 6) * Math.PI * 2;
+                    addSegment(x, y, z, x + Math.cos(a) * size, y, z + Math.sin(a) * size, priority);
+                }
+            }
+
+            for (let i = 0; i < 30; i++) {
+                const x = (Math.random() - 0.5) * 30;
+                const z = (Math.random() - 0.5) * 22;
+                const len = 0.1 + Math.random() * 0.2;
+                const angle = Math.random() * Math.PI * 2;
+                addSegment(x, 0.02, z, x + Math.cos(angle) * len, 0.02, z + Math.sin(angle) * len, 65);
+            }
+
+            segments.sort((a, b) => a.priority - b.priority);
+            return segments;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════════
+        // 엔진 및 렌더링
+        // ═══════════════════════════════════════════════════════════════════════════
+
+        let scene, camera, renderer;
+        let allSegments = [];
+        let segmentMeshes = [];
+        let sceneGroup;
+        let spotlights = [];
+        let currentIndex = 0;
+        let isComplete = false;
+        let endingStartTime = 0;
+
+        const CONFIG = {
+            TYPING_TIMEOUT: 1500,
+            SEGMENTS_PER_KEY: 7,
+            FADE_SPEED: 2,
+            DRAW_SPEED: 0.15,
+            ROTATION_SPEED: 0.0005,
+            ENDING_ROTATION_SPEED: 0.003,
+            NEON_COLOR: 0xffffff
+        };
+
+        let state = { isTyping: false, lastTypingTime: 0 };
+        let messageOverlay, endingOverlay;
+
+        function init() {
+            messageOverlay = document.getElementById('message-overlay');
+            endingOverlay = document.getElementById('ending-overlay');
+
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x000000, 0.005);
+
+            sceneGroup = new THREE.Group();
+            scene.add(sceneGroup);
+
+            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 500);
+            camera.position.set(0, 25, 70);
+            camera.lookAt(0, 5, 0);
+
+            // 앰비언트 라이트 (기본 밝기)
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+            scene.add(ambientLight);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.setClearColor(0x000000, 1);
+            document.body.appendChild(renderer.domElement);
+
+            allSegments = createChristmasSegments();
+
+            document.addEventListener('keydown', handleKeyPress);
+            window.addEventListener('resize', handleResize);
+
+            animate();
+        }
+
+        function createSegmentMesh(segment) {
+            const positions = new Float32Array(6);
+            positions[0] = segment.start.x; positions[1] = segment.start.y; positions[2] = segment.start.z;
+            positions[3] = segment.start.x; positions[4] = segment.start.y; positions[5] = segment.start.z;
+
+            const geometry = new THREE.BufferGeometry();
+            geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            // 순수 흰색 네온 - 플리커 없음
+            const material = new THREE.LineBasicMaterial({
+                color: CONFIG.NEON_COLOR,
+                transparent: true,
+                opacity: 1,
+                blending: THREE.AdditiveBlending,
+                linewidth: 2
+            });
+
+            const line = new THREE.Line(geometry, material);
+            line.userData = {
+                segment: segment,
+                drawProgress: 0
+            };
+            return line;
+        }
+
+        function addNewSegments(count) {
+            if (isComplete) return;
+
+            for (let i = 0; i < count; i++) {
+                if (currentIndex >= allSegments.length) {
+                    if (!isComplete) {
+                        isComplete = true;
+                        startEnding();
+                    }
+                    return;
+                }
+                const segment = allSegments[currentIndex];
+                if (!segment.drawn) {
+                    const mesh = createSegmentMesh(segment);
+                    sceneGroup.add(mesh);
+                    segmentMeshes.push(mesh);
+                    segment.drawn = true;
+                }
+                currentIndex++;
+            }
+        }
+
+        function createSpotlight(x, y, z, targetX, targetY, targetZ) {
+            const spotLight = new THREE.SpotLight(0xffffff, 0); // 초기 강도 0
+            spotLight.position.set(x, y, z);
+            spotLight.target.position.set(targetX, targetY, targetZ);
+            spotLight.angle = 0.3;
+            spotLight.penumbra = 0.5;
+            spotLight.decay = 2;
+            spotLight.distance = 200;
+
+            scene.add(spotLight);
+            scene.add(spotLight.target);
+
+            // 가로등 불빛 느낌을 위한 헬퍼 (선택사항, 분위기 위해 생략하거나 은은하게 추가 가능)
+            // 여기서는 실제 비추는 빛만 구현
+
+            return spotLight;
+        }
+
+        function startEnding() {
+            endingStartTime = Date.now();
+
+            // 스포트라이트 추가 (가로등 효과)
+            spotlights.push(createSpotlight(30, 40, 30, 0, 0, 0));
+            spotlights.push(createSpotlight(-30, 40, 20, 0, 0, 0));
+            spotlights.push(createSpotlight(0, 40, -30, 0, 0, 0));
+
+            setTimeout(() => {
+                endingOverlay.classList.add('visible');
+            }, 1000);
+        }
+
+        function handleKeyPress(event) {
+            if (event.code === 'F5' || event.code === 'F12' || event.ctrlKey || event.metaKey) return;
+            if (isComplete) return;
+
+            state.isTyping = true;
+            state.lastTypingTime = Date.now();
+            addNewSegments(CONFIG.SEGMENTS_PER_KEY);
+            messageOverlay.classList.add('hidden');
+        }
+
+        function handleResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function updateDrawingAnimation() {
+            segmentMeshes.forEach(mesh => {
+                if (mesh.userData.drawProgress < 1) {
+                    mesh.userData.drawProgress += CONFIG.DRAW_SPEED;
+                    if (mesh.userData.drawProgress > 1) mesh.userData.drawProgress = 1;
+
+                    const start = mesh.userData.segment.start;
+                    const end = mesh.userData.segment.end;
+                    const currentEnd = new THREE.Vector3().lerpVectors(start, end, mesh.userData.drawProgress);
+
+                    const positions = mesh.geometry.attributes.position.array;
+                    positions[3] = currentEnd.x;
+                    positions[4] = currentEnd.y;
+                    positions[5] = currentEnd.z;
+                    mesh.geometry.attributes.position.needsUpdate = true;
+                }
+            });
+        }
+
+        function updateState() {
+            const now = Date.now();
+            if (state.isTyping && now - state.lastTypingTime > CONFIG.TYPING_TIMEOUT) {
+                state.isTyping = false;
+            }
+
+            if (!isComplete && !state.isTyping && segmentMeshes.length > 0) {
+                const removeCount = Math.min(CONFIG.FADE_SPEED, segmentMeshes.length);
+                for (let i = 0; i < removeCount; i++) {
+                    const mesh = segmentMeshes.shift();
+                    sceneGroup.remove(mesh);
+                    mesh.userData.segment.drawn = false;
+                    if (mesh.geometry) mesh.geometry.dispose();
+                    if (mesh.material) mesh.material.dispose();
+                }
+                if (segmentMeshes.length === 0) {
+                    messageOverlay.classList.remove('hidden');
+                    currentIndex = 0;
+                }
+            }
+        }
+
+        function updateEnding() {
+            if (!isComplete) return;
+
+            const elapsed = (Date.now() - endingStartTime) / 1000;
+
+            // 크기: 1.0 -> 0.75
+            const targetScale = 0.75;
+            const scaleProgress = Math.min(1, elapsed / 3);
+            const easeProgress = 1 - Math.pow(1 - scaleProgress, 3);
+            const currentScale = 1 - (1 - targetScale) * easeProgress;
+            sceneGroup.scale.set(currentScale, currentScale, currentScale);
+
+            // 회전
+            sceneGroup.rotation.y += CONFIG.ENDING_ROTATION_SPEED;
+
+            // 스포트라이트 서서히 켜기
+            spotlights.forEach(light => {
+                if (light.intensity < 1.5) {
+                    light.intensity += 0.01;
+                }
+            });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            updateState();
+            updateDrawingAnimation();
+
+            if (isComplete) {
+                updateEnding();
+            } else {
+                sceneGroup.rotation.y += CONFIG.ROTATION_SPEED;
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+
+</html>

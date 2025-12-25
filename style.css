@@ -1,0 +1,224 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Chaos to Beauty - 혼돈에서 아름다움으로
+   Interactive 3D Digital Art Styles
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    overflow: hidden;
+    background: #000;
+    font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+    color: #fff;
+}
+
+#canvas-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 1;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Message Overlay - 초기 안내 메시지
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+#message-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    pointer-events: none;
+    transition: opacity 1.5s ease;
+}
+
+#message-overlay.hidden {
+    opacity: 0;
+}
+
+.message-content {
+    text-align: center;
+    animation: float 3s ease-in-out infinite;
+}
+
+.hint-text {
+    font-size: 2.5rem;
+    font-weight: 300;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: glow 2s ease-in-out infinite alternate;
+    text-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
+}
+
+.sub-hint {
+    margin-top: 1rem;
+    font-size: 1rem;
+    font-weight: 300;
+    letter-spacing: 0.2em;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+@keyframes glow {
+    from { filter: drop-shadow(0 0 20px rgba(102, 126, 234, 0.3)); }
+    to { filter: drop-shadow(0 0 40px rgba(240, 147, 251, 0.6)); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Typing Indicator - 타이핑 중 표시
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+#typing-indicator {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 24px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 50px;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+}
+
+#typing-indicator.active {
+    opacity: 1;
+}
+
+.pulse {
+    width: 10px;
+    height: 10px;
+    background: #4ade80;
+    border-radius: 50%;
+    animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { 
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.7);
+    }
+    50% { 
+        transform: scale(1.2);
+        box-shadow: 0 0 0 10px rgba(74, 222, 128, 0);
+    }
+}
+
+.typing-text {
+    font-size: 0.875rem;
+    font-weight: 300;
+    letter-spacing: 0.1em;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Progress Bar - 진행률 표시
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+#progress-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    z-index: 100;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, 
+        #667eea 0%, 
+        #764ba2 25%, 
+        #f093fb 50%, 
+        #4ade80 75%, 
+        #38bdf8 100%);
+    background-size: 200% 100%;
+    animation: progressGlow 2s linear infinite;
+    transition: width 0.3s ease;
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
+}
+
+@keyframes progressGlow {
+    0% { background-position: 0% 0%; }
+    100% { background-position: 200% 0%; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Quote Container - 인용구
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+#quote-container {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 100;
+    opacity: 0;
+    transition: opacity 2s ease;
+    pointer-events: none;
+}
+
+#quote-container.visible {
+    opacity: 1;
+}
+
+.quote {
+    font-size: 1.1rem;
+    font-weight: 300;
+    font-style: italic;
+    letter-spacing: 0.05em;
+    color: rgba(255, 255, 255, 0.6);
+    max-width: 600px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Responsive Design
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+    .hint-text {
+        font-size: 1.5rem;
+        letter-spacing: 0.2em;
+    }
+    
+    .sub-hint {
+        font-size: 0.875rem;
+    }
+    
+    .quote {
+        font-size: 0.9rem;
+        padding: 0 20px;
+    }
+    
+    #typing-indicator {
+        bottom: 20px;
+        padding: 10px 20px;
+    }
+}
