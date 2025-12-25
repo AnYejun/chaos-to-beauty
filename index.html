@@ -109,6 +109,22 @@
             text-shadow: 0 0 5px rgba(255, 255, 255, 0.5);
             opacity: 0.8;
         }
+
+        @media (max-width: 768px) {
+            .ending-title {
+                font-size: 3rem;
+                /* 모바일에서 폰트 크기 축소 */
+            }
+
+            .hint-text {
+                font-size: 1rem;
+            }
+
+            #ending-overlay {
+                padding-top: 20vh;
+                /* 모바일에서 위치 조정 */
+            }
+        }
     </style>
 </head>
 
@@ -466,7 +482,13 @@
             scene.add(sceneGroup);
 
             camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 500);
-            camera.position.set(0, 25, 70);
+
+            // 모바일(세로 모드)인지 체크하여 카메라 거리 조정
+            const isMobile = window.innerWidth < 768;
+            const initialZ = isMobile ? 110 : 70; // 모바일이면 더 멀리서 잡기
+            const initialY = isMobile ? 20 : 25;
+
+            camera.position.set(0, initialY, initialZ);
             camera.lookAt(0, 5, 0);
 
             // 앰비언트 라이트 (기본 밝기)
@@ -590,6 +612,14 @@
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+
+            // 리사이즈 시에도 카메라 위치 반응형 조정
+            const isMobile = window.innerWidth < 768;
+            const targetZ = isMobile ? 110 : 70;
+            // 부드러운 전환을 위해 바로 설정하거나 lerp 할 수 있지만 여기선 바로 설정
+            // 단, 사용자가 뷰를 돌리고 있을 수 있으므로 z만 바꾸는건 주의해야 하나, 
+            // 현재 회전은 sceneGroup이 하고 카메라는 고정이므로 괜찮음
+            camera.position.z = targetZ;
         }
 
         function updateDrawingAnimation() {
